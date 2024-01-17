@@ -1,4 +1,4 @@
-# sahkon_ennustus.py
+# electricity_prediction.py
 import requests
 
 
