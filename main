@@ -1,25 +1,50 @@
 # electricity_prediction.py
-import requests
 
+import os
+import requests
+import brain  # Varmista, että olet asentanut kirjaston: pip install brain.js
 
 def hae_saaennuste(kaupungit, api_avain):
     saaennusteet = {}
     for kaupunki in kaupungit:
-        # Käytä OpenWeatherMapin API:a saadaksesi säätiedot
-        url = f'http://api.openweathermap.org/data/2.5/weather?q={kaupunki},fi&appid={api_avain}'
-        vastaus = requests.get(url)
-        tiedot = vastaus.json()
-
-        # Tallenna relevantit tiedot säätieto-sanakirjaan
-        saaennusteet[kaupunki] = {
-            'lämpötila': tiedot['main']['temp'],
-            'tuulen_nopeus': tiedot['wind']['speed'],
-        }
+        try:
+            url = f'http://api.openweathermap.org/data/2.5/weather?q={kaupunki},fi&appid={api_avain}'
+            vastaus = requests.get(url)
+            vastaus.raise_for_status()  # Tarkista HTTP-virheet
+            tiedot = vastaus.json()
+            
+            saaennusteet[kaupunki] = {
+                'lämpötila': tiedot['main']['temp'],
+                'tuulen_nopeus': tiedot['wind']['speed'],
+            }
+        except Exception as e:
+            print(f"Virhe kaupungin {kaupunki} säätietojen hakemisessa: {e}")
     return saaennusteet
 
+def ennusta_sahkon_hinta(saaennusteet):
+    malli = brain.recurrent.LSTM()
+    data = saaennusteet['Helsinki']['lämpötila']
+    malli.train([data], {'errorThresh': 0.005 })
+    ennuste = malli.run(data)
+    return ennuste
 
-api_avain = '7ea927d6-b511-11ee-84d9-0242ac130002-7ea92858-b511-11ee-84d9-0242ac130002'
-kaupungit = ['Helsinki', 'Turku', 'Tampere', 'Oulu']
-saaennusteet = hae_saaennuste(kaupungit, api_avain)
-print(saaennusteet)
+def hae_api_avain():
+    # Tarkista ympäristömuuttujat API-avaimen varalta
+    api_avain = os.environ.get('SAA_API_AVAIN')
+    if not api_avain:
+        print("API-avainta ei ole asetettu. Ohjelma saattaa toimia rajoitetusti.")
+    return api_avain
 
+if __name__ == "__main__":
+    # Hae API-avain ympäristömuuttujista
+    api_avain = hae_api_avain()
+
+    kaupungit = ['Helsinki', 'Turku', 'Tampere', 'Oulu']
+
+    # Haetaan säätiedot
+    saaennusteet = hae_saaennuste(kaupungit, api_avain)
+    print(saaennusteet)
+
+    # Ennustetaan sähkön hinta
+    sahkon_ennuste = ennusta_sahkon_hinta(saaennusteet)
+    print(f"Sähkön hinta ennuste: {sahkon_ennuste}")
