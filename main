@@ -1,0 +1,25 @@
+# sahkon_ennustus.py
+import requests
+
+
+def hae_saaennuste(kaupungit, api_avain):
+    saaennusteet = {}
+    for kaupunki in kaupungit:
+        # Käytä OpenWeatherMapin API:a saadaksesi säätiedot
+        url = f'http://api.openweathermap.org/data/2.5/weather?q={kaupunki},fi&appid={api_avain}'
+        vastaus = requests.get(url)
+        tiedot = vastaus.json()
+
+        # Tallenna relevantit tiedot säätieto-sanakirjaan
+        saaennusteet[kaupunki] = {
+            'lämpötila': tiedot['main']['temp'],
+            'tuulen_nopeus': tiedot['wind']['speed'],
+        }
+    return saaennusteet
+
+
+api_avain = '7ea927d6-b511-11ee-84d9-0242ac130002-7ea92858-b511-11ee-84d9-0242ac130002'
+kaupungit = ['Helsinki', 'Turku', 'Tampere', 'Oulu']
+saaennusteet = hae_saaennuste(kaupungit, api_avain)
+print(saaennusteet)
+
